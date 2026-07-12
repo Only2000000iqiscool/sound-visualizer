@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Sound Visualizer
+GenericName=Audio Visualizer
+Comment=SPECTRA – Musik und Mikrofon visualisieren
+Exec=@PROJECT_DIR@/start.sh
+Icon=@PROJECT_DIR@/assets/spectra-app-icon.png
+Path=@PROJECT_DIR@
+Terminal=false
+Categories=AudioVideo;Audio;Player;Qt;
+StartupNotify=true
+Keywords=audio;music;visualizer;spectrum;microphone;spectra;

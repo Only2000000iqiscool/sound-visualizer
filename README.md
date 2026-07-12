@@ -1,6 +1,8 @@
 # Sound Visualizer
 
-Native **Desktop-App** (PyQt6) mit **17 Audio-Visualizern** — flüssig, ohne Browser.
+Native **Desktop-App** (Python + PyQt6) mit **17 Audio-Visualizern** — läuft auf **Linux und Windows**.
+
+Warum Python + PyQt6? Cross-platform, native Fenster/Dialoge und schnelle FFT mit NumPy. Dateien werden einmalig mit ffmpeg dekodiert und anschließend als PCM über Qt `QAudioSink` abgespielt; PyAudio wird ausschließlich für das Mikrofon verwendet.
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
 ![PyQt6](https://img.shields.io/badge/PyQt6-6.6+-green)
@@ -10,8 +12,12 @@ Native **Desktop-App** (PyQt6) mit **17 Audio-Visualizern** — flüssig, ohne B
 
 - **17 Visualizer:** Bars, Circular, Waveform, Mirror, Radial, Particles, Spiral, Kaleido, Grid, Flame, Matrix, Orbits, Blobs, Warp, Terrain, Tunnel, 3D Scope
 - **Native Oberfläche:** Menüleiste, Dateidialog, Einstellungen, Statusleiste
-- **Audio-Quellen:** Mikrofon (PyAudio) oder Dateien (MP3, WAV, OGG, FLAC, … via ffmpeg)
-- **Tastenkürzel:** `←`/`→` Visualizer, `Leertaste` Pause, `F11` Vollbild, `Ctrl+O` Datei öffnen
+- **Audio-Quellen:** frei wählbares Mikrofon (PyAudio) oder Dateien (MP3, WAV, OGG, FLAC, … via ffmpeg)
+- **Verständliche Eingänge:** automatische Bezeichnungen für Headset, Line-In, Front-Mikrofon und USB-Audio
+- **Schnelles Laden:** Hintergrund-Dekodierung, Prozentanzeige, Datenmenge, Restzeit und Cache für zuletzt verwendete Dateien
+- **Modernes Design:** violettes Kontrollpanel, große Quellen-Buttons und direkte Visualizer-Auswahl
+- **Tastenkürzel:** `←`/`→` Visualizer, `Leertaste` Pause, `F11` randloses Vollbild, `Esc` Vollbild beenden, `Ctrl+O` Datei öffnen
+- **Drag & Drop:** Audio-Dateien ins Fenster ziehen
 
 ## Voraussetzungen
 
@@ -25,7 +31,19 @@ Native **Desktop-App** (PyQt6) mit **17 Audio-Visualizern** — flüssig, ohne B
 sudo pacman -S python-pyqt6 python-numpy python-pyaudio ffmpeg
 ```
 
-## Installation
+### Windows
+
+- [Python 3.11+](https://www.python.org/downloads/)
+- [ffmpeg](https://ffmpeg.org/download.html) im `PATH`
+- Abhängigkeiten:
+
+```bat
+pip install -r requirements.txt
+```
+
+Unter Arch/CachyOS reicht **pacman** — kein pip nötig.
+
+## Installation (optional: venv)
 
 ```bash
 git clone https://github.com/Only2000000iqiscool/sound-visualizer.git
@@ -37,8 +55,14 @@ pip install -r requirements.txt
 
 ## Starten
 
+**Linux:**
 ```bash
 python3 run.py
+```
+
+**Windows:**
+```bat
+run.bat
 ```
 
 ## Bedienung
@@ -46,10 +70,11 @@ python3 run.py
 | Aktion | Shortcut / Menü |
 |--------|-----------------|
 | Audio öffnen | `Ctrl+O` → Datei |
-| Mikrofon | `Ctrl+M` → Datei |
+| Mikrofon auswählen | `Ctrl+M` → Datei |
 | Visualizer wechseln | `←` / `→` oder Menü Visualizer |
 | Pause | `Leertaste` |
-| Vollbild | `F11` |
+| Vollbild (randlos) | `F11` / `Esc` beenden |
+| Audio per Drag & Drop | Datei ins Fenster ziehen |
 | Einstellungen | Ansicht → Einstellungen |
 
 ## Projektstruktur

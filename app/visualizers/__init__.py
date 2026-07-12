@@ -19,9 +19,9 @@ from app.visualizers.draw import (
 )
 
 VISUALIZERS = [
+    {"id": "waveform", "name": "Oszilloskop", "draw": waveform, "fade": 0.22},
     {"id": "bars", "name": "Bars", "draw": bars, "fade": 0.18},
     {"id": "circular", "name": "Circular", "draw": circular, "fade": 0.15},
-    {"id": "waveform", "name": "Waveform", "draw": waveform, "fade": 0.22},
     {"id": "mirror", "name": "Mirror", "draw": mirror_wave, "fade": 0.2},
     {"id": "radial", "name": "Radial", "draw": radial, "fade": 0.14},
     {"id": "particles", "name": "Particles", "draw": particles, "fade": 0.08},
