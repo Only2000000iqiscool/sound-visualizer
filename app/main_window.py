@@ -33,8 +33,8 @@ from app.import_dialog import ImportDialog
 from app.microphone_dialog import MicrophoneDialog
 from app.output_dialog import OutputDialog
 from app.playback import AudioPlayback
-from app.settings_dialog import SettingsDialog
 from app.theme import PURPLE_STYLESHEET
+from app.visualizer_editor import VisualizerEditorPanel
 from app.visualizers import VISUALIZERS
 
 ICON_PATH = Path(__file__).resolve().parent.parent / "assets" / "spectra-app-icon.png"
@@ -75,6 +75,7 @@ class MainWindow(QMainWindow):
 
         self._build_menu()
         self._build_sidebar()
+        self._build_editor_dock()
         self._build_status()
         self._apply_settings()
         QTimer.singleShot(200, self._initialize_audio_output)
@@ -85,7 +86,7 @@ class MainWindow(QMainWindow):
         self.control_panel.microphone_requested.connect(self.choose_microphone)
         self.control_panel.output_requested.connect(self.choose_output_device)
         self.control_panel.stop_requested.connect(self.stop_audio)
-        self.control_panel.settings_requested.connect(self.open_settings)
+        self.control_panel.settings_requested.connect(self.toggle_visualizer_editor)
         self.control_panel.visualizer_selected.connect(self.select_viz)
 
         self.sidebar = QDockWidget(self)
@@ -94,6 +95,65 @@ class MainWindow(QMainWindow):
         self.sidebar.setTitleBarWidget(QWidget())
         self.sidebar.setWidget(self.control_panel)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.sidebar)
+
+    def _build_editor_dock(self) -> None:
+        self.editor_panel = VisualizerEditorPanel(self)
+        self.editor_panel.settings_changed.connect(self._on_live_editor_settings)
+        self.editor_panel.visualizer_changed.connect(self._on_editor_visualizer)
+
+        self.editor_dock = QDockWidget("Live-Vorschau", self)
+        self.editor_dock.setObjectName("editorDock")
+        self.editor_dock.setWidget(self.editor_panel)
+        self.editor_dock.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetClosable
+            | QDockWidget.DockWidgetFeature.DockWidgetMovable
+        )
+        self.editor_dock.setMinimumWidth(300)
+        self.editor_dock.hide()
+        self.editor_dock.visibilityChanged.connect(self._on_editor_visibility)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.editor_dock)
+
+    def _settings_snapshot(self) -> dict:
+        return {
+            "gain": self._gain,
+            "smoothing": self._smoothing,
+            "particles": self._particles,
+            "hue_shift": self._hue_shift,
+            "saturation": self._saturation,
+            "fade": self.canvas.fade_override(),
+            "viz_index": self.canvas.viz_index,
+        }
+
+    def toggle_visualizer_editor(self) -> None:
+        if self.editor_dock.isVisible():
+            self.editor_dock.hide()
+            return
+        self.editor_panel.load(self._settings_snapshot())
+        self.editor_dock.show()
+        self._update_preview_mode()
+
+    def _on_editor_visibility(self, visible: bool) -> None:
+        self._update_preview_mode()
+        if visible:
+            self.editor_panel.load(self._settings_snapshot())
+
+    def _update_preview_mode(self) -> None:
+        preview = self.editor_dock.isVisible() and not self.audio.running
+        self.canvas.set_preview_mode(preview)
+
+    def _on_live_editor_settings(self, values: dict) -> None:
+        self._gain = float(values["gain"])
+        self._smoothing = float(values["smoothing"])
+        self._particles = int(values["particles"])
+        self._hue_shift = float(values["hue_shift"])
+        self._saturation = float(values["saturation"])
+        self.canvas.set_fade_override(float(values["fade"]))
+        self._apply_settings()
+
+    def _on_editor_visualizer(self, index: int) -> None:
+        self.select_viz(index, sync_editor=False)
+        self.editor_panel.set_fade_for_visualizer(VISUALIZERS[index]["fade"])
+        self.canvas.set_fade_override(VISUALIZERS[index]["fade"])
 
     def _build_status(self) -> None:
         status = QStatusBar(self)
@@ -157,8 +217,9 @@ class MainWindow(QMainWindow):
         view_menu.addAction(fullscreen_action)
         self.fullscreen_action = fullscreen_action
 
-        settings_action = QAction("Einstellungen…", self)
-        settings_action.triggered.connect(self.open_settings)
+        settings_action = QAction("Visualizer anpassen…", self)
+        settings_action.setShortcut("Ctrl+E")
+        settings_action.triggered.connect(self.toggle_visualizer_editor)
         view_menu.addAction(settings_action)
 
         help_menu = menubar.addMenu("&Hilfe")
@@ -224,10 +285,14 @@ class MainWindow(QMainWindow):
         self.canvas.set_color_settings(self._hue_shift, self._saturation)
         self.canvas.set_auto_cycle(self._auto_cycle)
 
-    def select_viz(self, index: int) -> None:
+    def select_viz(self, index: int, *, sync_editor: bool = True) -> None:
         self.canvas.set_viz_index(index)
         self.sync_viz_menu(index)
         self.control_panel.set_visualizer(index)
+        if sync_editor and hasattr(self, "editor_panel"):
+            self.editor_panel.set_visualizer_index(index)
+            self.editor_panel.set_fade_for_visualizer(VISUALIZERS[index]["fade"])
+            self.canvas.set_fade_override(VISUALIZERS[index]["fade"])
         self.status_label.setText(f"Visualizer: {VISUALIZERS[index]['name']}")
 
     def sync_viz_menu(self, index: int) -> None:
@@ -309,6 +374,7 @@ class MainWindow(QMainWindow):
             self.level_bar.setRange(0, 100)
             self.status_label.setText(f"Wiedergabe: {Path(path).name}")
             self.control_panel.set_source(f"DATEI\n{Path(path).name}")
+            self._update_preview_mode()
             if dialog:
                 dialog.set_complete()
                 QTimer.singleShot(220, dialog.accept)
@@ -415,6 +481,7 @@ class MainWindow(QMainWindow):
                 f"MIKROFON\n{name}\n→ {output_name}"
             )
             logger.info("Mic started on input %s, output '%s'", name, output_name)
+            self._update_preview_mode()
         except AudioEngineError as exc:
             QMessageBox.critical(self, "Fehler", str(exc))
         except Exception as exc:
@@ -429,6 +496,7 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Gestoppt")
         self.control_panel.set_source("Keine Quelle aktiv", False)
         self.canvas.update()
+        self._update_preview_mode()
 
     def toggle_pause(self) -> None:
         if self.audio.mode != "file":
@@ -450,6 +518,8 @@ class MainWindow(QMainWindow):
         self.menuBar().hide()
         self.statusBar().hide()
         self.sidebar.hide()
+        if hasattr(self, "editor_dock"):
+            self.editor_dock.hide()
         # showFullScreen is borderless on Linux/Wayland and Windows. Changing
         # window flags while visible destroys the native window and can race
         # with repainting, which caused crashes in QWaylandShmBackingStore.
@@ -464,6 +534,8 @@ class MainWindow(QMainWindow):
         self.menuBar().show()
         self.statusBar().show()
         self.sidebar.show()
+        if hasattr(self, "editor_dock") and self.editor_dock.isVisible():
+            self.editor_dock.show()
         self.showNormal()
         if self._saved_geometry is not None:
             self.setGeometry(self._saved_geometry)
@@ -471,30 +543,7 @@ class MainWindow(QMainWindow):
             self.fullscreen_action.setChecked(False)
 
     def open_settings(self) -> None:
-        dlg = SettingsDialog(self)
-        old_gain = self._gain
-        dlg.load(
-            self._gain,
-            self._smoothing,
-            self._particles,
-            self._auto_cycle,
-            self._hue_shift,
-            self._saturation,
-        )
-        if dlg.exec():
-            self._gain = dlg.gain()
-            self._smoothing = dlg.smoothing()
-            self._particles = dlg.particles()
-            self._hue_shift = dlg.hue_shift()
-            self._saturation = dlg.saturation()
-            self._auto_cycle = dlg.auto_cycle.isChecked()
-            self._apply_settings()
-            if (
-                self.audio.mode == "mic"
-                and self._last_mic_device is not None
-                and abs(self._gain - old_gain) > 0.001
-            ):
-                QTimer.singleShot(0, lambda dev=self._last_mic_device: self.start_mic(dev))
+        self.toggle_visualizer_editor()
 
     def show_about(self) -> None:
         QMessageBox.about(

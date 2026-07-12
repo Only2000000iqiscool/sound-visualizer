@@ -64,7 +64,7 @@ class ControlPanel(QWidget):
             self.visualizer_selected
         )
 
-        settings_button = QPushButton("Einstellungen")
+        settings_button = QPushButton("  Visualizer anpassen")
         settings_button.setObjectName("ghostButton")
         settings_button.clicked.connect(self.settings_requested)
         stop_button = QPushButton("Audio stoppen")

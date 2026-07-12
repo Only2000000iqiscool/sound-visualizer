@@ -45,6 +45,19 @@ QDockWidget {
 QDockWidget > QWidget {
     border-right: 1px solid #2b2140;
 }
+#editorDock > QWidget {
+    border-right: none;
+    border-left: 1px solid #2b2140;
+}
+#visualizerEditor {
+    background: #0f0c19;
+}
+#editorHint {
+    color: #8b809c;
+    font-size: 11px;
+    line-height: 1.45;
+    padding: 4px 2px 8px 2px;
+}
 #controlPanel {
     background: #0f0c19;
 }

@@ -16,6 +16,7 @@ from PyQt6.QtGui import (
 )
 
 from app.audio_engine import AudioEngine, AudioEngineError
+from app.demo_audio import DemoSampleGenerator
 from app.visualizers import VISUALIZERS
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,8 @@ class VisualizerCanvas(QWidget):
         self._auto_cycle = False
         self._auto_timer = 0.0
         self._drag_active = False
+        self._preview_mode = False
+        self._demo = DemoSampleGenerator()
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
         self.setAutoFillBackground(False)
 
@@ -92,11 +95,30 @@ class VisualizerCanvas(QWidget):
         self.state["hue_shift"] = hue_shift
         self.state["saturation"] = saturation
 
+    def set_fade_override(self, fade: float) -> None:
+        self.state["fade_override"] = fade
+
+    def fade_override(self) -> float:
+        return float(
+            self.state.get(
+                "fade_override",
+                VISUALIZERS[self.viz_index]["fade"],
+            )
+        )
+
+    def set_preview_mode(self, enabled: bool) -> None:
+        self._preview_mode = enabled
+        self.update()
+
+    def preview_mode(self) -> bool:
+        return self._preview_mode
+
     def _reset_viz_state(self) -> None:
         keep = {
             "particle_count": self.state.get("particle_count", 1800),
             "hue_shift": self.state.get("hue_shift", 0.0),
             "saturation": self.state.get("saturation", 85.0),
+            "fade_override": VISUALIZERS[self.viz_index]["fade"],
         }
         self.state = keep
 
@@ -138,11 +160,14 @@ class VisualizerCanvas(QWidget):
             p.end()
             return
 
+        if data is None and self._preview_mode:
+            data = self._demo.sample(t, self.audio.gain, self.audio.smoothing)
+
         if data is None:
             self._paint_idle(p, w, h, t)
         else:
             try:
-                fade = viz["fade"]
+                fade = self.fade_override()
                 p.fillRect(self.rect(), QColor(6, 6, 12, int(255 * fade)))
                 viz["draw"](p, w, h, data, self.state, t)
                 self._last_level = data["level"]
