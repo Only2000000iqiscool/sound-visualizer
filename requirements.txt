@@ -1,0 +1,3 @@
+PyQt6>=6.6
+numpy>=1.26
+PyAudio>=0.2.14
