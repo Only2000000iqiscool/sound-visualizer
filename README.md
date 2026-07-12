@@ -28,7 +28,7 @@ sudo pacman -S python-pyqt6 python-numpy python-pyaudio ffmpeg
 ## Installation
 
 ```bash
-git clone https://github.com/<dein-user>/sound-visualizer.git
+git clone https://github.com/Only2000000iqiscool/sound-visualizer.git
 cd sound-visualizer
 python3 -m venv .venv
 source .venv/bin/activate
